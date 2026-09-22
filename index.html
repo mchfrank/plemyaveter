@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Племяветерский переводчик</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    min-height:100vh;
+    color:#e8f0fb;
+    background:
+      radial-gradient(1100px 600px at 8% -12%, #1a3a68 0%, transparent 62%),
+      radial-gradient(900px 520px at 108% 4%, #10494a 0%, transparent 58%),
+      radial-gradient(700px 500px at 50% 120%, #241a4a 0%, transparent 60%),
+      #080d15;
+    padding:28px 16px 70px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  header{text-align:center;margin-bottom:26px}
+  h1{
+    margin:0 0 6px;
+    font-size:clamp(24px,4vw,40px);
+    letter-spacing:.5px;
+    background:linear-gradient(92deg,#7fd8ff,#9affe0 45%,#b8a8ff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    font-weight:800;
+  }
+  .sub{margin:0;color:#8fa6c4;font-size:15px}
+
+  .dir{display:flex;gap:8px;justify-content:center;margin:0 0 18px;flex-wrap:wrap}
+  .dir button{
+    background:#131f33;border:1px solid #22314a;color:#9db4d2;
+    padding:10px 18px;border-radius:999px;cursor:pointer;font-size:14px;
+    transition:.18s;font-weight:600;
+  }
+  .dir button:hover{border-color:#33agent}
+  .dir button:hover{border-color:#3a5c8c;color:#cfe3ff}
+  .dir button.active{
+    background:linear-gradient(100deg,#1d4b7a,#1c5f5e);
+    color:#eaf6ff;border-color:#3f8fd0;
+    box-shadow:0 0 24px -6px #3f8fd0aa;
+  }
+
+  .panes{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.panes{grid-template-columns:1fr}}
+
+  .pane{
+    background:linear-gradient(180deg,#0f1929,#0c1522);
+    border:1px solid #1d2b41;border-radius:16px;padding:14px;
+    display:flex;flex-direction:column;min-height:230px;
+    box-shadow:0 18px 40px -30px #000;
+  }
+  .pane > label{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;letter-spacing:1.4px;text-transform:uppercase;
+    color:#6b83a3;margin-bottom:9px;font-weight:700;
+  }
+  textarea{
+    flex:1;width:100%;resize:vertical;min-height:150px;
+    background:#0a121e;border:1px solid #1b2940;border-radius:11px;
+    color:#dceafb;padding:12px 13px;font-size:16px;line-height:1.55;
+    font-family:inherit;outline:none;transition:.15s;
+  }
+  textarea:focus{border-color:#3f8fd0;box-shadow:0 0 0 3px #3f8fd022}
+  .output{
+    flex:1;min-height:150px;background:#0a121e;border:1px solid #1b2940;
+    border-radius:11px;padding:12px 13px;font-size:16px;line-height:1.6;
+    white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;
+    color:#9affe0;
+  }
+  .output .unk{color:#ff9d9d;border-bottom:1px dashed #ff9d9d66;cursor:help}
+  .output .empty{color:#42566f}
+
+  .toolbar{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .toolbar button{
+    background:#152337;border:1px solid #24344d;color:#a8bedb;
+    padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer;transition:.15s;
+  }
+  .toolbar button:hover{background:#1c2f4a;color:#dceafb;border-color:#33507a}
+
+  .breakdown{margin-top:16px}
+  .breakdown h3, .dict h3{
+    font-size:12px;letter-spacing:1.4px;text-transform:uppercase;
+    color:#6b83a3;margin:0 0 10px;font-weight:700;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{
+    background:#101c2c;border:1px solid #1e2e45;border-radius:9px;
+    padding:6px 10px;font-size:13px;display:flex;gap:7px;align-items:center;
+  }
+  .chip .ru{color:#9db4d2}
+  .chip .ar{color:#4d6a8c}
+  .chip .pv{color:#9affe0;font-weight:600}
+  .chip.bad{border-color:#4a2222;background:#1a1013}
+  .chip.bad .pv{color:#ff9d9d;font-weight:400}
+  .chip.pass .pv{color:#c9b6ff}
+
+  details.dict{
+    margin-top:22px;background:#0e1725;border:1px solid #1d2b41;
+    border-radius:16px;padding:14px 16px;
+  }
+  details.dict summary{
+    cursor:pointer;font-weight:700;color:#9db4d2;font-size:14px;
+    list-style:none;outline:none;
+  }
+  details.dict summary::-webkit-details-marker{display:none}
+  details.dict summary::before{content:"▸ ";color:#3f8fd0}
+  details.dict[open] summary::before{content:"▾ "}
+  #dictSearch{
+    width:100%;margin:12px 0 10px;background:#0a121e;border:1px solid #1b2940;
+    border-radius:9px;color:#dceafb;padding:9px 12px;font-size:14px;outline:none;
+    font-family:inherit;
+  }
+  #dictSearch:focus{border-color:#3f8fd0}
+  #dictList{max-height:340px;overflow:auto;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px;padding-right:4px}
+  .ditem{
+    display:flex;justify-content:space-between;gap:10px;
+    background:#0b1420;border:1px solid #17253a;border-radius:8px;
+    padding:7px 10px;font-size:13.5px;
+  }
+  .ditem .a{color:#9db4d2}
+  .ditem .b{color:#9affe0;text-align:right}
+  #dictList::-webkit-scrollbar{width:8px}
+  #dictList::-webkit-scrollbar-thumb{background:#1e2e45;border-radius:8px}
+
+  .note{
+    margin-top:20px;font-size:12.5px;color:#5c7391;line-height:1.7;
+    background:#0b1420;border:1px solid #17253a;border-radius:12px;padding:12px 15px;
+  }
+  .note b{color:#8fa6c4}
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);
+    background:#1d4b7a;color:#eaf6ff;padding:10px 20px;border-radius:999px;
+    font-size:14px;opacity:0;pointer-events:none;transition:.25s;
+    border:1px solid #3f8fd0;box-shadow:0 10px 30px -10px #000;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Племяветерский язык</h1>
+    <p class="sub">Переводчик · русский ⇄ племяветерский</p>
+  </header>
+
+  <div class="dir">
+    <button data-dir="ru-pv" class="active">Русский → Племяветерский</button>
+    <button data-dir="pv-ru">Племяветерский → Русский</button>
+  </div>
+
+  <div class="panes">
+    <div class="pane">
+      <label><span id="inLabel">Русский текст</span></label>
+      <textarea id="input" placeholder="Например: я люблю ветер"></textarea>
+      <div class="toolbar">
+        <button data-sample="иак">я люблю ветер</button>
+        <button data-sample="спокойной ночи">спокойной ночи</button>
+        <button data-sample="пошли">пошли в лагерь</button>
+        <button id="clear">Очистить</button>
+      </div>
+    </div>
+    <div class="pane">
+      <label><span id="outLabel">Племяветерский</span>
+        <button id="copy" style="background:none;border:none;color:#6b83a3;cursor:pointer;font-size:11px;letter-spacing:1px">КОПИРОВАТЬ</button>
+      </label>
+      <div id="output" class="output"><span class="empty">Здесь появится перевод…</span></div>
+    </div>
+  </div>
+
+  <div class="breakdown" id="breakdown"></div>
+
+  <details class="dict">
+    <summary>Словарь (нажми, чтобы раскрыть)</summary>
+    <input id="dictSearch" placeholder="Поиск по русскому или племяветерскому…">
+    <div id="dictList"></div>
+  </details>
+
+  <div class="note">
+    <b>Правила языка:</b> множественное число — буква <b>ё</b> в конце слова
+    (нэеки → нэекиё). Слова изменяются только по числу.<br>
+    Прилагательное — к существительному добавляется <b>-ть</b> (куейть — крутой).
+    Наречие — у прилагательного убирается <b>ь</b> (куейт — круто).
+    Причастие — к прилагательному добавляется <b>-ю</b>.
+    Глагол — к существительному добавляется <b>-нга</b> (жежейнга — быть).
+    Деепричастие — к глаголу добавляется <b>-я</b>.<br>
+    Предлоги, союзы и частицы (кроме «не» → «ге») — как в русском.
+  </div>
+</div>
+
+<div class="toast" id="toast">Скопировано</div>
+
+<script>
+/* ===================== СЛОВАРЬ ===================== */
+const RU_PV = {
+  /* приветствия, вежливость */
+  "привет":"покачисотокаониси",
+  "пока":"притокониосочианиси",
+  "спасибо":"героницуто",
+  "пожалуйста":"уникучеки",
+  "ура":"уца",
+  "да":"зеу",
+  "нет":"тису",
+  "не":"ге",
+  "молодец":"делинге",
+  "поздравление":"куратоха",
+  "поздравляю":"куратоха",
+  "уважение":"уканег",
+  "спокойной ночи":"слентигорокить ночекацукии",
+  "спокойный":"слентигорокить",
+  "ночь":"ночекацукии",
+  "ночи":"ночекацукии",
+
+  /* местоимения и служебное */
+  "я":"иак",
+  "ты":"тылу",
+  "это":"шэг",
+  "весь":"юбщи",
+  "вся":"юбщи",
+  "всё":"юбщи",
+  "все":"юбщи",
+  "самый":"неуфийше",
+  "самая":"неуфийше",
+  "самое":"неуфийше",
+
+  /* вопросы */
+  "почему":"биюжэт",
+  "сколько":"фоссо",
+
+  /* существительные */
+  "ветер":"ветрограницусуци",
+  "тень":"тенилум",
+  "тени":"тенилум",
+  "гора":"нэеки",
+  "туннель":"дарцуже",
+  "лагерь":"ютинге",
+  "внелагерь":"геютинге",
+  "куча с добычей":"киуки с знерт",
+  "куча":"киуки",
+  "добыча":"знерт",
+  "котёнок":"дегято",
+  "котенок":"дегято",
+  "кот":"дегяго",
+  "кошка":"дегяга",
+  "оруженосец":"уцейниг",
+  "воитель":"швоэи",
+  "мама":"уюшама",
+  "папа":"уюшапа",
+  "луна":"монэдо",
+  "слава":"бергослув",
+  "мир":"шеинко",
+  "язык":"югенчао",
+  "солнце":"сану",
+  "друг":"микуюн",
+  "гроза":"героу",
+  "река":"ленииц",
+  "лето":"шенко",
+  "зима":"яименко",
+  "осень":"дежеэлко",
+  "весна":"шецукко",
+  "добро":"читери",
+  "зло":"щентори",
+  "гомотетия":"гомекуцфи",
+  "холоп":"кринцэ",
+  "вк":"вентокак",
+  "ск":"секуклоузэ",
+  "дг":"лостнеку",
+  "ог":"оготнеку",
+  "кринж":"грену",
+  "кпв":"эдоеонкуцето",
+  "шби":"боегенирубить",
+
+  /* прилагательные */
+  "крутой":"куейть",
+  "умный":"тогнеить",
+  "лучший":"юлиуть",
+  "избранный":"лиуокетью",
+
+  /* наречия и прочее */
+  "уже":"цежет",
+  "сегодня":"зехорт",
+  "вчера":"нехорт",
+  "завтра":"кухорт",
+  "хорошо":"цукентот",
+  "плохо":"геннощэйт",
+  "так":"неут",
+  "тепло":"роукохт",
+  "ещё":"генуцт",
+  "еще":"генуцт",
+  "вниз":"вщенголэт",
+  "вверх":"вненголэт",
+  "влево":"вуенголэт",
+  "вправо":"вкенголэт",
+
+  /* глаголы (начальная форма) */
+  "быть":"жежейнга",
+  "идти":"гоунинга",
+  "любить":"трисокеенга",
+  "знать":"эрнекцунга",
+  "оставаться":"некуонга",
+  "учить":"ленснга",
+  "кушать":"эгенринга",
+  "наступить":"дожэхцинга",
+  "ответь":"йоторонга",
+  "ответить":"йоторонга"
+};
+
+/* Личные формы глаголов и особые случаи */
+const VERB_FORMS = {
+  "люблю":"трисокеенга","любишь":"трисокеенга","любит":"трисокеенга",
+  "любим":"трисокеенга","любите":"трисокеенга","любят":"трисокеенга",
+  "любил":"трисокеенга","любила":"трисокеенга","любили":"трисокеенга",
+
+  "знаю":"эрнекцунга","знаешь":"эрнекцунга","знает":"эрнекцунга",
+  "знаем":"эрнекцунга","знаете":"эрнекцунга","знают":"эрнекцунга",
+  "знал":"эрнекцунга","знала":"эрнекцунга","знали":"эрнекцунга",
+
+  "кушаю":"эгенринга","кушаешь":"эгенринга","кушает":"эгенринга",
+  "кушаем":"эгенринга","кушаете":"эгенринга","кушают":"эгенринга",
+  "кушал":"эгенринга","ем":"эгенринга","ешь":"эгенринга","ест":"эгенринга",
+  "едим":"эгенринга","едите":"эгенринга","едят":"эгенринга",
+
+  "иду":"гоунинга","идёшь":"гоунинга","идешь":"гоунинга","идёт":"гоунинга",
+  "идет":"гоунинга","идём":"гоунинга","идем":"гоунинга","идёте":"гоунинга",
+  "идете":"гоунинга","идут":"гоунинга","шёл":"гоунинга","шел":"гоунинга",
+  "шла":"гоунинга","шли":"гоунинга","пошли":"гоунинга","пойдём":"гоунинга",
+  "пойдем":"гоунинга","пойдёт":"гоунинга","пойдет":"гоунинга",
+
+  "учу":"ленснга","учишь":"ленснга","учит":"ленснга","учим":"ленснга",
+  "учите":"ленснга","учат":"ленснга","учил":"ленснга",
+
+  "остаюсь":"некуонга","остаёшься":"некуонга","остаешься":"некуонга",
+  "остаётся":"некуонга","остается":"некуонга","остаются":"некуонга",
+  "остался":"некуонга",
+
+  "был":"жежейнга","была":"жежейнга","было":"жежейнга","были":"жежейнгеё",
+  "буду":"жежейнга","будешь":"жежейнга","будет":"жежейнга",
+  "будем":"жежейнга","будете":"жежейнга","будут":"жежейнга","есть":"жежейнга",
+
+  "наступил":"дожэхцинга","наступила":"дожэхцинга","наступило":"дожэхцинга",
+  "наступили":"дожэхцинга","наступит":"дожэхцинга",
+
+  "ответил":"йоторонга","ответила":"йоторонга","ответило":"йоторонга",
+  "ответили":"йоторонга","отвечай":"йоторонга","отвечаю":"йоторонга"
+};
+
+/* Предлоги, союзы, частицы — как в русском */
+const PASS_THROUGH = new Set([
+  "и","в","во","на","с","со","из","к","ко","по","за","под","над","о","об","от",
+  "до","для","при","у","через","между","перед","но","а","или","либо","что",
+  "чтобы","когда","если","же","ли","бы","ведь","вот","только","даже","ну",
+  "эх","ах","ой","там","тут","здесь","потом","то","как","чем","тем"
+]);
+
+/* ===================== МОРФОЛОГИЯ ===================== */
+const RU_SUFFIXES = [
+  "ыми","ими","ого","его","ому","ему","ами","ями",
+  "ая","яя","ое","ее","ый","ий","ой","ую","юю","ые","ие","ых","их","ым","им",
+  "ах","ях","ам","ям","ов","ев","ей","ом","ем","ою","ею",
+  "а","я","о","е","ы","и","у","ю","ь"
+].sort((a,b)=>b.length-a.length);
+
+function ruRoot(w){
+  for(const s of RU_SUFFIXES){
+    if(w.length - s.length >= 2 && w.endsWith(s)) return w.slice(0, -s.length);
+  }
+  return w;
+}
+
+const PLURAL_RU = /(ыми|ими|ых|их|ые|ие|ами|ями|ах|ях|ам|ям|ов|ев|ей|ы|и)$/;
+
+/* множественное число в племяветерском */
+function pvPlural(pv){
+  if(pv.endsWith("ё")) return pv;
+  if(pv.endsWith("а")) return pv.slice(0,-1) + "её";
+  return pv + "ё";
+}
+
+/* ===================== ИНДЕКСЫ ===================== */
+const ROOT_INDEX = {};
+for(const [ru, pv] of Object.entries(RU_PV)){
+  if(ru.includes(" ")) continue;
+  const r = ruRoot(ru);
+  if(r.length < 2) continue;
+  (ROOT_INDEX[r] ||= []).push({key:ru, pv});
+}
+
+const PV_RU = {};
+for(const [ru, pv] of Object.entries(RU_PV)) if(!PV_RU[pv]) PV_RU[pv] = ru;
+
+/* ===================== УТИЛИТЫ ===================== */
+const esc = s => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const isWord = t => /[A-Za-zА-Яа-яЁё]/.test(t);
+
+function tokenize(s){
+  return s.match(/[A-Za-zА-Яа-яЁё]+|[^A-Za-zА-Яа-яЁё]+/g) || [];
+}
+
+function matchCase(src, dst){
+  if(!src || !dst) return dst;
+  const c = src[0];
+  if(c === c.toUpperCase() && c !== c.toLowerCase()){
+    return dst[0].toUpperCase() + dst.slice(1);
+  }
+  return dst;
+}
+
+/* ===================== ПЕРЕВОД RU → PV ===================== */
+function translateWordRu(w){
+  const low = w.toLowerCase();
+
+  if(RU_PV[low])      return {pv: RU_PV[low], ok:true, kind:"dict"};
+  if(VERB_FORMS[low]) return {pv: VERB_FORMS[low], ok:true, kind:"verb"};
+  if(PASS_THROUGH.has(low)) return {pv: w, ok:true, kind:"pass"};
+
+  const root = ruRoot(low);
+  if(root.length >= 2 && ROOT_INDEX[root]){
+    const plural = PLURAL_RU.test(low);
+    const list = ROOT_INDEX[root];
+    const cand = list.find(c => PLURAL_RU.test(c.key) === plural) || list[0];
+    let pv = cand.pv;
+    if(plural) pv = pvPlural(pv);
+    return {pv, ok:true, kind:"form"};
+  }
+  return {pv: w, ok:false, kind:"unknown"};
+}
+
+function translateRuToPv(text){
+  const tokens = tokenize(text);
+  const res = tokens.slice();
+  const details = [];
+  let i = 0;
+
+  while(i < tokens.length){
+    if(!isWord(tokens[i])){ i++; continue; }
+
+    /* собираем возможную фразу (до 3 слов подряд через пробелы) */
+    const idxs = [];
+    let j = i;
+    while(j < tokens.length && idxs.length < 3){
+      if(isWord(tokens[j])){ idxs.push(j); j++; }
+      else if(tokens[j].trim() === ""){ j++; }
+      else break;
+    }
+
+    /* пробуем фразу из 3, потом из 2 слов */
+    let handled = false;
+    for(let len = Math.min(idxs.length,3); len >= 2; len--){
+      const phrase = idxs.slice(0,len).map(k=>tokens[k].toLowerCase()).join(" ");
+      if(RU_PV[phrase]){
+        const end = idxs[len-1];
+        for(let k=i;k<=end;k++) res[k] = "";
+        res[i] = esc(matchCase(tokens[i], RU_PV[phrase]));
+        details.push({ru:phrase, pv:RU_PV[phrase], ok:true, kind:"dict"});
+        i = end + 1;
+        handled = true;
+        break;
+      }
+    }
+    if(handled) continue;
+
+    /* одно слово */
+    const r = translateWordRu(tokens[i]);
+    if(r.ok){
+      res[i] = esc(matchCase(tokens[i], r.pv));
+      details.push({ru:tokens[i], pv:r.pv, ok:true, kind:r.kind});
+    }else{
+      res[i] = '<span class="unk" title="нет в словаре">' + esc(tokens[i]) + '</span>';
+      details.push({ru:tokens[i], pv:tokens[i], ok:false, kind:"unknown"});
+    }
+    i++;
+  }
+
+  const html = res.join("") || "";
+  const plain = res.join("").replace(/<[^>]+>/g,"");
+  return {html, plain, details};
+}
+
+/* ===================== ПЕРЕВОД PV → RU ===================== */
+function revLookup(w){
+  const low = w.toLowerCase();
+  if(PV_RU[low]) return {ru: PV_RU[low], ok:true};
+  if(low.endsWith("её")){
+    const b = low.slice(0,-2) + "а";
+    if(PV_RU[b]) return {ru: PV_RU[b], ok:true};
+  }
+  if(low.endsWith("ё")){
+    const b = low.slice(0,-1);
+    if(PV_RU[b]) return {ru: PV_RU[b], ok:true};
+  }
+  return {ru: w, ok:false};
+}
+
+function translatePvToRu(text){
+  const tokens = tokenize(text);
+  const res = tokens.slice();
+  const details = [];
+
+  for(let i=0;i<tokens.length;i++){
+    if(!isWord(tokens[i])) continue;
+    const low = tokens[i].toLowerCase();
+
+    /* фраза */
+    let handled = false;
+    const idxs = [];
+    let j = i;
+    while(j < tokens.length && idxs.length < 3){
+      if(isWord(tokens[j])){ idxs.push(j); j++; }
+      else if(tokens[j].trim() === ""){ j++; }
+      else break;
+    }
+    for(let len = Math.min(idxs.length,3); len >= 2; len--){
+      const phrase = idxs.slice(0,len).map(k=>tokens[k].toLowerCase()).join(" ");
+      if(PV_RU[phrase]){
+        const end = idxs[len-1];
+        for(let k=i;k<=end;k++) res[k] = "";
+        res[i] = esc(matchCase(tokens[i], PV_RU[phrase]));
+        details.push({ru:PV_RU[phrase], pv:phrase, ok:true});
+        i = end; handled = true; break;
+      }
+    }
+    if(handled) continue;
+
+    const r = revLookup(tokens[i]);
+    if(r.ok){
+      res[i] = esc(matchCase(tokens[i], r.ru));
+      details.push({ru:r.ru, pv:tokens[i], ok:true});
+    }else{
+      res[i] = '<span class="unk" title="нет в словаре">' + esc(tokens[i]) + '</span>';
+      details.push({ru:tokens[i], pv:tokens[i], ok:false});
+    }
+  }
+  const html = res.join("");
+  return {html, plain: html.replace(/<[^>]+>/g,""), details};
+}
+
+/* ===================== ИНТЕРФЕЙС ===================== */
+const inputEl   = document.getElementById("input");
+const outputEl  = document.getElementById("output");
+const bdEl      = document.getElementById("breakdown");
+const inLabel   = document.getElementById("inLabel");
+const outLabel  = document.getElementById("outLabel");
+const toast     = document.getElementById("toast");
+
+let direction = "ru-pv";
+let lastPlain = "";
+
+function render(){
+  const text = inputEl.value;
+
+  if(!text.trim()){
+    outputEl.innerHTML = '<span class="empty">Здесь появится перевод…</span>';
+    bdEl.innerHTML = "";
+    lastPlain = "";
+    return;
+  }
+
+  const r = direction === "ru-pv" ? translateRuToPv(text) : translatePvToRu(text);
+  outputEl.innerHTML = r.html;
+  lastPlain = r.plain;
+
+  /* разбор */
+  let chips = "";
+  for(const d of r.details){
+    if(d.ok && d.kind === "pass"){
+      chips += `<div class="chip pass"><span class="ru">${esc(d.ru)}</span><span class="ar">→</span><span class="pv">${esc(d.pv)}</span></div>`;
+    }else if(d.ok){
+      chips += `<div class="chip"><span class="ru">${esc(d.ru)}</span><span class="ar">→</span><span class="pv">${esc(d.pv)}</span></div>`;
+    }else{
+      chips += `<div class="chip bad"><span class="ru">${esc(d.ru)}</span><span class="ar">→</span><span class="pv">нет в словаре</span></div>`;
+    }
+  }
+  bdEl.innerHTML = chips
+    ? `<h3>Разбор по словам</h3><div class="chips">${chips}</div>`
+    : "";
+}
+
+/* переключение направления */
+document.querySelectorAll(".dir button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".dir button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    direction = btn.dataset.dir;
+    if(direction === "ru-pv"){
+      inLabel.textContent = "Русский текст";
+      outLabel.textContent = "Племяветерский";
+      inputEl.placeholder = "Например: я люблю ветер";
+    }else{
+      inLabel.textContent = "Племяветерский текст";
+      outLabel.textContent = "Русский";
+      inputEl.placeholder = "Например: иак трисокеенга ветрограницусуци";
+    }
+    render();
+  });
+});
+
+inputEl.addEventListener("input", render);
+
+document.getElementById("clear").addEventListener("click", ()=>{
+  inputEl.value = "";
+  render();
+  inputEl.focus();
+});
+
+document.getElementById("copy").addEventListener("click", async ()=>{
+  if(!lastPlain) return;
+  try{
+    await navigator.clipboard.writeText(lastPlain);
+  }catch(e){
+    const ta = document.createElement("textarea");
+    ta.value = lastPlain; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove();
+  }
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"), 1400);
+});
+
+/* примеры */
+document.querySelectorAll("[data-sample]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    inputEl.value = b.dataset.sample;
+    render();
+  });
+});
+
+/* словарь */
+const dictList = document.getElementById("dictList");
+function renderDict(filter=""){
+  const f = filter.trim().toLowerCase();
+  const items = Object.entries(RU_PV)
+    .filter(([ru,pv]) => !f || ru.includes(f) || pv.includes(f))
+    .sort((a,b)=>a[0].localeCompare(b[0],"ru"));
+  dictList.innerHTML = items.map(([ru,pv]) =>
+    `<div class="ditem"><span class="a">${esc(ru)}</span><span class="b">${esc(pv)}</span></div>`
+  ).join("") || `<div class="ditem"><span class="a">Ничего не найдено</span></div>`;
+}
+renderDict();
+document.getElementById("dictSearch").addEventListener("input", e => renderDict(e.target.value));
+</script>
+</body>
+</html>
